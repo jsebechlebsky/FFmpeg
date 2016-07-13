@@ -37,26 +37,26 @@ typedef struct NoiseContext {
 static int noise(AVBSFContext *ctx, AVPacket *out)
 {
     NoiseContext *s = ctx->priv_data;
-    AVPacket *in;
+    AVPacket in;
     int amount = s->amount > 0 ? s->amount : (s->state % 10001 + 1);
     int i, ret = 0;
 
     if (amount <= 0)
         return AVERROR(EINVAL);
 
-    ret = ff_bsf_get_packet(ctx, &in);
+    ret = ff_bsf_get_packet_ref(ctx, &in);
     if (ret < 0)
         return ret;
 
-    ret = av_new_packet(out, in->size);
+    ret = av_new_packet(out, in.size);
     if (ret < 0)
         goto fail;
 
-    ret = av_packet_copy_props(out, in);
+    ret = av_packet_copy_props(out, &in);
     if (ret < 0)
         goto fail;
 
-    memcpy(out->data, in->data, in->size);
+    memcpy(out->data, in.data, in.size);
 
     for (i = 0; i < out->size; i++) {
         s->state += out->data[i] + 1;
@@ -66,7 +66,7 @@ static int noise(AVBSFContext *ctx, AVPacket *out)
 fail:
     if (ret < 0)
         av_packet_unref(out);
-    av_packet_free(&in);
+    av_packet_unref(&in);
     return ret;
 }
 

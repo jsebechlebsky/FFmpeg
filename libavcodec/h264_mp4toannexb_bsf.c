@@ -171,7 +171,7 @@ static int h264_mp4toannexb_filter(AVBSFContext *ctx, AVPacket *out)
 {
     H264BSFContext *s = ctx->priv_data;
 
-    AVPacket *in;
+    AVPacket in;
     uint8_t unit_type;
     int32_t nal_size;
     uint32_t cumul_size    = 0;
@@ -180,20 +180,19 @@ static int h264_mp4toannexb_filter(AVBSFContext *ctx, AVPacket *out)
     int            buf_size;
     int ret = 0, i;
 
-    ret = ff_bsf_get_packet(ctx, &in);
+    ret = ff_bsf_get_packet_ref(ctx, &in);
     if (ret < 0)
         return ret;
 
     /* nothing to filter */
     if (!s->extradata_parsed) {
-        av_packet_move_ref(out, in);
-        av_packet_free(&in);
+        av_packet_move_ref(out, &in);
         return 0;
     }
 
-    buf      = in->data;
-    buf_size = in->size;
-    buf_end  = in->data + in->size;
+    buf      = in.data;
+    buf_size = in.size;
+    buf_end  = in.data + in.size;
 
     do {
         ret= AVERROR(EINVAL);
@@ -267,14 +266,14 @@ next_nal:
         cumul_size += nal_size + s->length_size;
     } while (cumul_size < buf_size);
 
-    ret = av_packet_copy_props(out, in);
+    ret = av_packet_copy_props(out, &in);
     if (ret < 0)
         goto fail;
 
 fail:
     if (ret < 0)
         av_packet_unref(out);
-    av_packet_free(&in);
+    av_packet_unref(&in);
 
     return ret;
 }
