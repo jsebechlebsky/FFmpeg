@@ -1305,10 +1305,13 @@ int av_write_trailer(AVFormatContext *s)
     for (;; ) {
         AVPacket pkt;
         ret = interleave_packet(s, &pkt, NULL, 1);
-        if (ret < 0)
-            goto fail;
         if (!ret)
             break;
+
+        av_assert0(!(s->flags & AVFMT_FLAG_NONBLOCK));
+
+        if (ret < 0)
+            goto fail;
 
         ret = write_packet(s, &pkt);
         if (ret >= 0)
@@ -1338,6 +1341,9 @@ fail:
             s->oformat->write_trailer(s);
         }
     }
+
+    if (ret == AVERROR(EAGAIN))
+        return ret;
 
     if (s->oformat->deinit)
         s->oformat->deinit(s);

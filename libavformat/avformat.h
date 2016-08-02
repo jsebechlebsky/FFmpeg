@@ -2593,8 +2593,12 @@ int av_write_uncoded_frame_query(AVFormatContext *s, int stream_index);
  *
  * May only be called after a successful call to avformat_write_header.
  *
+ * If AVFMT_FLAG_NONBLOCK is set, this call may return AVERROR(EAGAIN)
+ * meaning the operation is pending and the call should be repeated.
+ *
  * @param s media file handle
- * @return 0 if OK, AVERROR_xxx on error
+ * @return 0 if OK, AVERROR(EAGAIN) in case call should be repeated,
+ *         other AVERROR on error
  */
 int av_write_trailer(AVFormatContext *s);
 
