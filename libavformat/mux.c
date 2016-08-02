@@ -1298,9 +1298,31 @@ fail:
     return ret;
 }
 
+static void deinit_muxer(AVFormatContext *s)
+{
+    int i;
+
+    if (s->oformat->deinit)
+        s->oformat->deinit(s);
+
+    s->internal->header_written =
+    s->internal->initialized =
+    s->internal->streams_initialized = 0;
+
+    for (i = 0; i < s->nb_streams; i++) {
+        av_freep(&s->streams[i]->priv_data);
+        av_freep(&s->streams[i]->index_entries);
+    }
+
+    if (s->oformat->priv_class)
+        av_opt_free(s->priv_data);
+
+    av_freep(&s->priv_data);
+}
+
 int av_write_trailer(AVFormatContext *s)
 {
-    int ret, i;
+    int ret;
 
     for (;; ) {
         AVPacket pkt;
@@ -1345,24 +1367,11 @@ fail:
     if (ret == AVERROR(EAGAIN))
         return ret;
 
-    if (s->oformat->deinit)
-        s->oformat->deinit(s);
-
-    s->internal->header_written =
-    s->internal->initialized =
-    s->internal->streams_initialized = 0;
-
     if (s->pb)
        avio_flush(s->pb);
     if (ret == 0)
        ret = s->pb ? s->pb->error : 0;
-    for (i = 0; i < s->nb_streams; i++) {
-        av_freep(&s->streams[i]->priv_data);
-        av_freep(&s->streams[i]->index_entries);
-    }
-    if (s->oformat->priv_class)
-        av_opt_free(s->priv_data);
-    av_freep(&s->priv_data);
+    deinit_muxer(s);
     return ret;
 }
 
