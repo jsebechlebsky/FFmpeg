@@ -1450,7 +1450,7 @@ typedef struct AVFormatContext {
     int flags;
 #define AVFMT_FLAG_GENPTS       0x0001 ///< Generate missing pts even if it requires parsing future frames.
 #define AVFMT_FLAG_IGNIDX       0x0002 ///< Ignore index.
-#define AVFMT_FLAG_NONBLOCK     0x0004 ///< Do not block when reading packets from input.
+#define AVFMT_FLAG_NONBLOCK     0x0004 ///< Do not block when reading packets from input / writing packets to output.
 #define AVFMT_FLAG_IGNDTS       0x0008 ///< Ignore DTS on frames that contain both DTS & PTS
 #define AVFMT_FLAG_NOFILLIN     0x0010 ///< Do not infer any values from other values, just return what is stored in the container
 #define AVFMT_FLAG_NOPARSE      0x0020 ///< Do not use AVParsers, you also must set AVFMT_FLAG_NOFILLIN as the fillin code works on frames and no parsing -> no frames. Also seeking to frames can not work if parsing to find frame boundaries has been disabled
@@ -2474,6 +2474,10 @@ int avformat_init_output(AVFormatContext *s, AVDictionary **options);
  * the interleaving should call av_interleaved_write_frame() instead of this
  * function.
  *
+ * In case the muxer is operating in non-blocking mode (AVFMT_FLAG_NONBLOCK
+ * is set), this function can return AVERROR(EAGAIN) meaning the call should
+ * be repeated.
+ *
  * @param s media file handle
  * @param pkt The packet containing the data to be written. Note that unlike
  *            av_interleaved_write_frame(), this function does not take
@@ -2515,6 +2519,9 @@ int av_write_frame(AVFormatContext *s, AVPacket *pkt);
  * Using this function instead of av_write_frame() can give muxers advance
  * knowledge of future packets, improving e.g. the behaviour of the mp4
  * muxer for VFR content in fragmenting mode.
+ *
+ * This call is not supported and must not be called if muxer is operating
+ * in non-blocking mode (AVFMT_FLAG_NONBLOCK is set).
  *
  * @param s media file handle
  * @param pkt The packet containing the data to be written.

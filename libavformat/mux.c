@@ -1240,6 +1240,8 @@ int av_interleaved_write_frame(AVFormatContext *s, AVPacket *pkt)
 {
     int ret, flush = 0;
 
+    av_assert0(!(s->flags & AVFMT_FLAG_NONBLOCK));
+
     ret = prepare_input_packet(s, pkt);
     if (ret < 0)
         goto fail;
