@@ -2595,12 +2595,27 @@ int av_write_uncoded_frame_query(AVFormatContext *s, int stream_index);
  *
  * If AVFMT_FLAG_NONBLOCK is set, this call may return AVERROR(EAGAIN)
  * meaning the operation is pending and the call should be repeated.
+ * If caller decides to abort operation (after too many calls have returned
+ * AVERROR(EAGAIN)), it can be done by calling @ref avformat_write_abort().
  *
  * @param s media file handle
  * @return 0 if OK, AVERROR(EAGAIN) in case call should be repeated,
  *         other AVERROR on error
  */
 int av_write_trailer(AVFormatContext *s);
+
+/**
+ * Abort muxer operation and free private data.
+ * For muxer operating in blocking mode, this is equivalent to calling
+ * av_write_trailer. For muxer operating in non-blocking mode, this will
+ * call deinitialize routine even if there is operation pending
+ * and @ref av_write_trailer() keeps returning AVERROR(EAGAIN).
+ * May only be called after a successful call to avformat_write_header.
+ *
+ * @param s Media file handle
+ * return >= 0 on success, negative AVERROR on error
+ */
+int avformat_write_abort(AVFormatContext *s);
 
 /**
  * Return the output format in the list of registered output formats

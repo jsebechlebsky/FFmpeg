@@ -1375,6 +1375,19 @@ fail:
     return ret;
 }
 
+int avformat_write_abort(AVFormatContext *s)
+{
+    int ret;
+
+    ret = av_write_trailer(s);
+    if (ret == AVERROR(EAGAIN)) {
+        deinit_muxer(s);
+        ret = 0;
+    }
+
+    return ret;
+}
+
 int av_get_output_timestamp(struct AVFormatContext *s, int stream,
                             int64_t *dts, int64_t *wall)
 {
