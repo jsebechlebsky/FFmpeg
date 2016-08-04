@@ -340,6 +340,137 @@ fail:
     return ret;
 }
 
+static int retry_write_frame(AVFormatContext *oc, AVPacket *pkt, int max_retries)
+{
+    int ret = 0, retry_count = 0;
+    do {
+        ret = av_write_frame(oc, pkt);
+        if (ret == AVERROR(EAGAIN)) {
+            av_usleep(SLEEPTIME_10_MS);
+            retry_count++;
+        }
+    } while ( ret == AVERROR(EAGAIN) && retry_count < max_retries);
+    return ret;
+}
+
+static int retry_write_trailer(AVFormatContext *oc, int max_retries)
+{
+    int ret = 0, retry_count = 0;
+    do {
+        ret = av_write_trailer(oc);
+        if (ret == AVERROR(EAGAIN)) {
+            av_usleep(SLEEPTIME_10_MS);
+            retry_count++;
+        }
+    } while (ret == AVERROR(EAGAIN) && retry_count < max_retries);
+    return ret;
+}
+
+static int fifo_nonblock_test(AVFormatContext *oc, AVDictionary **opts,
+                              const FailingMuxerPacketData *pkt_data)
+{
+    int ret = 0, i;
+    AVPacket pkt;
+
+    av_init_packet(&pkt);
+
+    oc->flags |= AVFMT_FLAG_NONBLOCK;
+
+    ret = avformat_write_header(oc, opts);
+    if (ret) {
+        fprintf(stderr, "Unexpected write_header failure: %s\n",
+                av_err2str(ret));
+        return ret;
+    }
+
+    for (i = 0; i < 16; i++ ) {
+        ret = prepare_packet(&pkt, pkt_data, i);
+        if (ret < 0) {
+            fprintf(stderr, "Failed to prepare test packet: %s\n",
+                    av_err2str(ret));
+            goto fail;
+        }
+        ret = retry_write_frame(oc, &pkt, 100);
+        av_packet_unref(&pkt);
+        if (ret < 0)
+            break;
+    }
+
+    if (ret) {
+        fprintf(stderr, "Unexpected write_packet error: %s\n", av_err2str(ret));
+        goto fail;
+    }
+
+    ret = retry_write_trailer(oc, 100);
+    if (ret == AVERROR(EAGAIN)) {
+        fprintf(stderr, "write_trailer() operation timeout\n");
+        goto fail;
+    } else if (ret < 0)
+        fprintf(stderr, "Unexpected write_trailer error: %s\n", av_err2str(ret));
+
+    return ret;
+fail:
+    avformat_write_abort(oc);
+    return ret;
+}
+
+static int fifo_nonblock_abort_test(AVFormatContext *oc, AVDictionary **opts,
+                                    const FailingMuxerPacketData *pkt_data)
+{
+    int ret = 0, i;
+    AVPacket pkt;
+    int64_t start_time, end_time, duration;
+
+    av_init_packet(&pkt);
+
+    oc->flags |= AVFMT_FLAG_NONBLOCK;
+
+    ret = avformat_write_header(oc, opts);
+    if (ret) {
+        fprintf(stderr, "Unexpected write header failure: %s\n",
+                av_err2str(ret));
+        goto fail;
+    }
+
+    av_assert0(pkt_data->sleep_time > 0);
+
+    start_time = av_gettime_relative();
+    for (i = 0; i < 16; i++ ) {
+        ret = prepare_packet(&pkt, pkt_data, i);
+        if (ret < 0) {
+            fprintf(stderr, "Failed to prepare test packet: %s\n",
+                    av_err2str(ret));
+            goto fail;
+        }
+        ret = retry_write_frame(oc, &pkt, 100);
+        av_packet_unref(&pkt);
+        if (ret < 0)
+            break;
+    }
+
+    if (ret) {
+        fprintf(stderr, "Unexpected write_packet error: %s\n", av_err2str(ret));
+        goto fail;
+    }
+
+    avformat_write_abort(oc);
+
+    end_time = av_gettime_relative();
+    duration = end_time - start_time;
+
+    if (duration > (16*pkt_data->sleep_time)/2 ) {
+        fprintf(stderr, "Aborting output took too much time: %u us,"
+                " expected time if not aborted %u us\n",
+                (unsigned) duration, 16*pkt_data->sleep_time);
+        ret = AVERROR(ETIMEDOUT);
+    }
+
+    return ret;
+fail:
+    avformat_write_abort(oc);
+    return ret;
+}
+
 typedef struct TestCase {
     int (*test_func)(AVFormatContext *, AVDictionary **,const FailingMuxerPacketData *pkt_data);
     const char *test_name;
@@ -425,6 +556,14 @@ const TestCase tests[] = {
          * less than number_of_pkts * 50 MS.
          */
         {fifo_overflow_drop_test, "overflow with packet dropping", "queue_size=3:drop_pkts_on_overflow=1",
+         0, 0, 0, {0, 0, SLEEPTIME_50_MS}},
+
+        /* Simple test of nonblocking mode, the consumer should receive all the packets. */
+        {fifo_nonblock_test, "nonblocking mode test", "queue_size=3",
+         1, 0, 0, {0, 0, SLEEPTIME_10_MS}},
+
+        /* Test of terminating fifo muxer with av_abort_format() */
+        {fifo_nonblock_abort_test, "abort in nonblocking mode", "queue_size=16",
          0, 0, 0, {0, 0, SLEEPTIME_50_MS}},
 
         {NULL}
