@@ -927,6 +927,9 @@ FF_ENABLE_DEPRECATION_WARNINGS
 int av_write_frame(AVFormatContext *s, AVPacket *pkt)
 {
     int ret;
+#if FF_API_COMPUTE_PKT_FIELDS2 && FF_API_LAVF_AVCTX
+    int64_t st_cur_dts_backup, st_priv_pts_val_backup;
+#endif
 
     ret = prepare_input_packet(s, pkt);
     if (ret < 0)
@@ -953,6 +956,9 @@ int av_write_frame(AVFormatContext *s, AVPacket *pkt)
         return ret;
 
 #if FF_API_COMPUTE_PKT_FIELDS2 && FF_API_LAVF_AVCTX
+    st_cur_dts_backup = s->streams[pkt->stream_index]->cur_dts;
+    st_priv_pts_val_backup = s->streams[pkt->stream_index]->priv_pts->val;
+
     ret = compute_muxer_pkt_fields(s, s->streams[pkt->stream_index], pkt);
 
     if (ret < 0 && !(s->oformat->flags & AVFMT_NOTIMESTAMPS))
@@ -960,7 +966,13 @@ int av_write_frame(AVFormatContext *s, AVPacket *pkt)
 #endif
 
     ret = write_packet(s, pkt);
-    if (ret >= 0 && s->pb && s->pb->error < 0)
+    if (s->flags & AVFMT_FLAG_NONBLOCK && ret == AVERROR(EAGAIN)) {
+#if FF_API_COMPUTE_PKT_FIELDS2 && FF_API_LAVF_AVCTX
+        s->streams[pkt->stream_index]->cur_dts = st_cur_dts_backup;
+        s->streams[pkt->stream_index]->priv_pts->val = st_priv_pts_val_backup;
+#endif
+        return ret;
+    } else if (ret >= 0 && s->pb && s->pb->error < 0)
         ret = s->pb->error;
 
     if (ret >= 0)
