@@ -1,0 +1,8 @@
+bsfs: 'tok,concat' input: 'a,b,c','d,e,f','g,h,i'
+    -> "ab","cd","ef","gh","i[flush]",
+bsfs: 'tok=delim=?:flush_str=x!x!x:flush_nr=3,tok=delim=!' input: 'a?b!c','d?e!f','g?h!i'
+    -> "a","b","c","d","e","f","g","h","i","x","x","x","x","x","x","x","x","x","[flush]",
+bsfs: 'concat,concat=nr=3' input: 'a','b','c','d','e','f','g','h','i','j','k','l'
+    -> "abcdef","ghijkl",
+bsfs: 'tok,concat,tok=delim=-' input: 'a-b,c-d','e-f,g-h','i-j,k-l','m-n,o-p'
+    -> "a","bc","d","e","fg","h","i","jk","l","m","no","p","[flush]","[flush]",

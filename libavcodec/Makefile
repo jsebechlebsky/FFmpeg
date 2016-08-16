@@ -1039,7 +1039,8 @@ SKIPHEADERS-$(CONFIG_VDA)              += vda.h vda_vt_internal.h
 SKIPHEADERS-$(CONFIG_VDPAU)            += vdpau.h vdpau_internal.h
 SKIPHEADERS-$(CONFIG_VIDEOTOOLBOX)     += videotoolbox.h vda_vt_internal.h
 
-TESTPROGS = avpacket                                                    \
+TESTPROGS = bsf_list                                                    \
+            avpacket                                                    \
             celp_math                                                   \
             imgconvert                                                  \
             jpeg2000dwt                                                 \

@@ -82,5 +82,9 @@ fate-libavcodec-huffman: CMD = run libavcodec/tests/mjpegenc_huffman
 fate-libavcodec-huffman: CMP = null
 fate-libavcodec-huffman: REF = /dev/null
 
+FATE_LIBAVCODEC-yes += fate-libavcodec-bsf-list
+fate-libavcodec-bsf-list: libavcodec/tests/bsf_list$(EXESUF)
+fate-libavcodec-bsf-list: CMD = run libavcodec/tests/bsf_list
+
 FATE-$(CONFIG_AVCODEC) += $(FATE_LIBAVCODEC-yes)
 fate-libavcodec: $(FATE_LIBAVCODEC-yes)
