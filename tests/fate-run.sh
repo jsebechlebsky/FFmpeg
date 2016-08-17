@@ -74,6 +74,12 @@ oneline(){
     printf '%s\n' "$1" | diff -u -b - "$2"
 }
 
+multidiff(){
+    while read -r ref_file out_file; do
+        diff -u -b "${base}/ref/fate/${ref_file}" "${outdir}/${out_file}" || return $?
+    done <"$1"
+}
+
 run(){
     test "${V:-0}" -gt 0 && echo "$target_exec" $target_path/"$@" >&3
     $target_exec $target_path/"$@"
@@ -362,6 +368,7 @@ if test -e "$ref" || test $cmp = "oneline" || test $cmp = "grep" ; then
     case $cmp in
         diff)   diff -u -b "$ref" "$outfile"            >$cmpfile ;;
         rawdiff)diff -u    "$ref" "$outfile"            >$cmpfile ;;
+        mdiff)  multidiff  "$ref"                       >$cmpfile ;;
         oneoff) oneoff     "$ref" "$outfile"            >$cmpfile ;;
         stddev) stddev     "$ref" "$outfile"            >$cmpfile ;;
         oneline)oneline    "$ref" "$outfile"            >$cmpfile ;;
