@@ -16,6 +16,12 @@ fate-tee-muxer-tstsrc: CMD = ./ffmpeg  -f lavfi -i "testsrc=s=640x480" -f lavfi 
 fate-tee-muxer-tstsrc: CMP = mdiff
 FATE-TEE-MUXER-$(CONFIG_TEE_MUXER) += fate-tee-muxer-tstsrc
 
+fate-tee-fifo-muxer: CMD = ./ffmpeg -f lavfi -i "testsrc=s=640x480" -f lavfi -i "sine"\
+	                 -t 1 -map 0:v -map 1:a -c:v copy -c:a copy -flags +bitexact -fflags +bitexact -f tee -use_fifo 1 -fifo_options queue_size=10\
+			 "[f=framecrc]$(TARGET_PATH)/tests/data/fate/tee-fifo-muxer-copy|[f=framecrc:select=1:fifo_options=queue_size\=5]$(TARGET_PATH)/tests/data/fate/tee-fifo-muxer-audio"
+fate-tee-fifo-muxer: CMP = mdiff
+FATE-TEE-MUXER-$(call ALLYES, TEE_MUXER, FIFO_MUXER) += fate-tee-fifo-muxer
+
 FATE_SAMPLES_FFMPEG += $(FATE-SAMPLES-TEE-MUXER-yes)
 FATE_FFMPEG += $(FATE-TEE-MUXER-yes)
 
