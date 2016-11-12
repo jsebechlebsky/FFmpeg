@@ -1771,6 +1771,11 @@ outputs and setup transparent recovery. By default this feature is turned off.
 @item fifo_options
 Options to pass to fifo pseudo-muxer instances. See @ref{fifo}.
 
+@item fifo_[opt]
+Option will be passed as [opt] to fifo pseudo-muxer instances. For example
+fifo_queue_size will set queue_size option of fifo pseudo muxer.
+This allows to specify fifo_options without need of extensive escaping.
+
 @end table
 
 The slave outputs are specified in the file name given to the muxer,
@@ -1800,6 +1805,10 @@ This allows to override tee muxer use_fifo option for individual slave muxer.
 @item fifo_options
 This allows to override tee muxer fifo_options for individual slave muxer.
 See @ref{fifo}.
+
+@item fifo_[opt]
+This allows to override tee muxer fifo_options by setting [opt] for fifo of
+individual slave muxer, without need of another level of escaping.
 
 It is possible to specify to which streams a given bitstream filter
 applies, by appending a stream specifier to the option separated by

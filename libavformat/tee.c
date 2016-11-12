@@ -156,6 +156,23 @@ static void close_slaves(AVFormatContext *avf)
     av_freep(&tee->slaves);
 }
 
+static int steal_fifo_options(AVDictionary **src_options, AVDictionary **dst_options)
+{
+    int ret;
+    AVDictionaryEntry *entry;
+
+    while((entry = av_dict_get(*src_options, "fifo_", NULL, AV_DICT_IGNORE_SUFFIX))) {
+        ret = av_dict_set(dst_options, entry->key + 5, /* 5 = strlen("fifo_") */
+                          entry->value, AV_DICT_DONT_STRDUP_VAL);
+        if (ret < 0)
+            return ret;
+
+        entry->value = NULL;
+        ret = av_dict_set(src_options, entry->key, NULL, 0);
+    }
+    return 0;
+}
+
 static int open_slave(AVFormatContext *avf, char *slave, TeeSlave *tee_slave)
 {
     int i, ret;
@@ -186,6 +203,9 @@ static int open_slave(AVFormatContext *avf, char *slave, TeeSlave *tee_slave)
     STEAL_OPTION("onfail", on_fail);
     STEAL_OPTION("use_fifo", use_fifo);
     STEAL_OPTION("fifo_options", fifo_options_str);
+    ret = steal_fifo_options(&options, &tee_slave->fifo_options);
+    if (ret < 0)
+        goto end;
 
     ret = parse_slave_failure_policy_option(on_fail, tee_slave);
     if (ret < 0) {
