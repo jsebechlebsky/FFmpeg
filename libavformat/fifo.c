@@ -468,7 +468,8 @@ static void *fifo_consumer_thread(void *data)
     return NULL;
 }
 
-static int fifo_mux_init(AVFormatContext *avf, AVOutputFormat *oformat)
+static int fifo_mux_init(AVFormatContext *avf, AVOutputFormat *oformat,
+                         const char *format, const char *filename)
 {
     FifoContext *fifo = avf->priv_data;
     AVIOInterruptCB interrupt_cb = {.callback = fifo_interrupt_callback_wrapper,
@@ -476,7 +477,7 @@ static int fifo_mux_init(AVFormatContext *avf, AVOutputFormat *oformat)
     AVFormatContext *avf2;
     int ret = 0, i;
 
-    ret = avformat_alloc_output_context2(&avf2, oformat, NULL, NULL);
+    ret = avformat_alloc_output_context2(&avf2, oformat, format, filename);
     if (ret < 0)
         return ret;
 
@@ -534,7 +535,7 @@ static int fifo_init(AVFormatContext *avf)
         return ret;
     }
 
-    ret = fifo_mux_init(avf, oformat);
+    ret = fifo_mux_init(avf, oformat, oformat->name, avf->filename);
     if (ret < 0)
         return ret;
 
